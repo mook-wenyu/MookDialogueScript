@@ -1,0 +1,657 @@
+:: start
+// 初始化游戏状态
+var $player_name "旅行者"
+var $player_hp 100
+var $player_mp 50
+var $player_gold 100
+var $player_level 1
+var $player_exp 0
+var $player_has_sword false
+var $player_has_potion false
+var $player_has_magic_scroll false
+var $player_quest_active false
+var $player_reputation 0
+var $current_time "早晨"
+var $weather "晴朗"
+var $day_count 1
+var $player_skills_learned 0
+var $player_discovered_locations 0
+
+// 初始化NPC状态
+var $npc_merchant_attitude 0
+var $npc_guard_alert_level 0
+var $npc_villager_trust 0
+var $npc_mayor_quests_completed 0
+var $npc_wizard_friendship 0
+var $npc_blacksmith_respect 0
+
+// 初始化世界状态
+var $world_danger_level 1
+var $world_quest_available true
+var $world_market_open true
+var $world_festival_day false
+var $world_magic_awakened false
+var $world_ancient_ruins_discovered false
+
+// 游戏开始
+call log("第{$day_count}天的冒险开始了...")
+
+// 主场景描述
+这是一个被魔法和神秘笼罩的世界，你作为一名流浪的{$player_name}来到了这个边境小镇。 #场景 #开场
+
+这里是{$current_time}的{$weather}，远处的山脉若隐若现，空气中飘荡着淡淡的魔法气息。 #场景 #环境
+
+// 初始NPC遭遇
+if $day_count == 1
+    神秘老人[微笑]: 年轻人，我在你身上感受到了不一样的气息...
+    -> 询问详情
+        神秘老人: 这个世界正在发生变化，也许你就是预言中提到的那个人。
+        set $world_magic_awakened true
+    -> 礼貌告别
+        神秘老人: 时机到了，你自然会明白的。
+endif
+
+// 动态NPC对话
+if $npc_merchant_attitude > 0
+    商人[热情]: 欢迎回来，{$player_name}！今天我这里有一些特别的商品。
+elif $world_festival_day
+    商人[兴奋]: 节日快乐！今天所有商品都打八折！
+else
+    商人[平静]: 需要些什么吗？我这里应有尽有。
+endif
+
+// 守卫对话
+if $npc_guard_alert_level > 0
+    守卫[警惕]: 最近有黑暗生物出没，请务必小心。
+elif $player_reputation >= 5
+    守卫[敬重]: {$player_name}大人，您来了。
+else
+    守卫[例行]: 欢迎来到落叶镇，请遵守镇上的规矩。
+endif
+
+// 主菜单选项
+-> 查看状态
+    显示状态面板
+    => status_panel
+-> 探索小镇
+    if $npc_villager_trust >= 2
+        老镇民[热情]: 让我带你转转，这里可有不少有趣的地方！
+        => town_tour
+    else
+        老镇民[谨慎]: 外乡人，你得先证明自己是值得信任的。
+        => town_entrance
+    endif
+-> 访问市场
+    if $world_market_open
+        => market
+    elif $world_festival_day
+        商人: 节日大甩卖！所有商品特价！
+        => festival_market
+    else
+        商人: 市场已经关门了，明天再来吧。
+        => town_entrance
+    endif
+-> 拜访村长
+    if $npc_mayor_quests_completed >= 2
+        村长[赞赏]: {$player_name}，你已经证明了自己的实力。
+        => mayor_office
+    else
+        村长助手: 村长正在处理要事，请稍候。
+        => waiting_room
+    endif
+-> 探索郊外
+    if $world_ancient_ruins_discovered
+        => ancient_ruins
+    else
+        => wilderness
+    endif
+
+:: status_panel
+// 状态面板
+你的状态：
+生命值：{$player_hp}/100
+魔法值：{$player_mp}/50
+等级：{$player_level}
+经验值：{$player_exp}/100
+金币：{$player_gold}
+声望：{$player_reputation}
+当前时间：{$current_time}
+天气：{$weather}
+第{$day_count}天
+
+装备状态：
+if $player_has_sword
+    你装备了一把剑
+else
+    你没有装备武器
+endif
+
+if $player_has_potion
+    你有一瓶治疗药水
+endif
+
+-> 返回
+    => town_entrance
+
+:: town_tour
+// 动态场景描述
+if $weather == "晴朗"
+    阳光明媚，小镇里的房屋在阳光下闪闪发亮。 #场景 #小镇 #晴天
+elif $weather == "下雨"
+    细雨绵绵，整个小镇笼罩在一片朦胧中。 #场景 #小镇 #雨天
+else
+    天色阴沉，小镇显得格外安静。 #场景 #小镇 #阴天
+endif
+
+// 动态NPC对话
+if $npc_villager_trust >= 3
+    村民[热情]: 这里是我们的集市，每天都很热闹！
+else
+    村民[普通]: 这里是集市，你可以在这里买到各种物品。
+endif
+
+-> 继续参观
+    add $npc_villager_trust 1
+    => town_tour
+-> 结束参观
+    => town_entrance
+
+:: market
+// 动态市场系统
+if $world_festival_day
+    商人[欢快]: 节日期间，特别优惠！
+else
+    if $weather == "下雨"
+        商人[抱怨]: 这鬼天气，生意都不好做了。
+    else
+        商人[热情]: 今天天气真好，我这里有不少好东西！
+    endif
+endif
+
+// 动态商品价格
+var $sword_price plus(50, multiply(5, $world_danger_level))
+var $potion_price plus(20, multiply(2, $world_danger_level))
+var $magic_scroll_price plus(100, multiply(10, $world_danger_level))
+
+// 商品列表
+-> 查看武器
+    商人: 这把剑是由精灵族打造的，价格{$sword_price}金币。
+    -> 购买剑
+        if $player_gold >= $sword_price && !$player_has_sword
+            sub $player_gold $sword_price
+            set $player_has_sword true
+            商人: 好眼光！这把剑一定会成为你的好伙伴。
+            add $npc_merchant_attitude 1
+        else
+            商人: 抱歉，你的钱不够，或者已经有一把剑了。
+        endif
+    -> 继续浏览
+        => market
+-> 查看药水
+    商人: 这种治疗药水是由山中的药师特制的，价格{$potion_price}金币。
+    -> 购买药水
+        if $player_gold >= $potion_price && !$player_has_potion
+            sub $player_gold $potion_price
+            set $player_has_potion true
+            商人: 愿这药水能在危急时刻救你一命。
+            add $npc_merchant_attitude 1
+        else
+            商人: 抱歉，你的钱不够，或者已经有药水了。
+        endif
+    -> 继续浏览
+        => market
+-> 查看魔法道具
+    if $world_magic_awakened
+        商人[神秘]: 这卷魔法卷轴蕴含着强大的力量，价格{$magic_scroll_price}金币。
+        -> 购买卷轴
+            if $player_gold >= $magic_scroll_price && !$player_has_magic_scroll
+                sub $player_gold $magic_scroll_price
+                set $player_has_magic_scroll true
+                商人: 使用它时要小心，魔法的力量不可掌控。
+                add $npc_merchant_attitude 2
+            else
+                商人: 看来这卷轴与你无缘。
+            endif
+    else
+        商人: 抱歉，魔法物品只卖给有资质的人。
+    endif
+-> 离开市场
+    => town_entrance
+
+:: wilderness
+// 野外探索系统
+if $weather == "晴朗"
+    阳光穿过树叶，在地面上投下斑驳的影子。远处似乎有什么在闪烁... #场景 #森林
+elif $weather == "下雨"
+    雨水打在树叶上发出沙沙声，泥土中似乎露出了一些奇怪的纹路。 #场景 #森林
+else
+    浓雾笼罩着森林，隐约能看到一些古老建筑的轮廓。 #场景 #森林
+endif
+
+-> 调查闪光点
+    if random(1, 100) <= 30
+        你发现了一处古代遗迹的入口！
+        set $world_ancient_ruins_discovered true
+        add $player_discovered_locations 1
+        => ancient_ruins
+    else
+        只是阳光照在水珠上的反射...
+        => wilderness
+    endif
+-> 探索纹路
+    if $world_magic_awakened
+        这些纹路似乎是某种魔法阵的一部分...
+        -> 仔细研究
+            add $player_skills_learned 1
+            => magic_circle
+        -> 返回
+            => wilderness
+    else
+        这些看起来只是普通的痕迹。
+        => wilderness
+    endif
+-> 返回小镇
+    => town_entrance
+
+:: ancient_ruins
+// 遗迹探索
+这是一处古老的遗迹，墙壁上刻满了神秘的符文。空气中充满了魔法的气息。 #场景 #遗迹
+
+if $player_has_magic_scroll
+    符文开始发光，与你的魔法卷轴产生共鸣！
+    -> 使用卷轴
+        set $player_has_magic_scroll false
+        add $player_skills_learned 2
+        add $world_danger_level 2
+        => secret_chamber
+    -> 保持观察
+        => ancient_ruins
+else
+    符文黯淡无光，似乎缺少什么来激活它们。
+endif
+
+-> 探索遗迹
+    if random(1, 100) <= 40
+        你发现了一些有价值的物品！
+        add $player_gold random(50, 100)
+        => ancient_ruins
+    else
+        这个房间已经被搜索过了。
+        => ancient_ruins
+    endif
+-> 离开遗迹
+    => wilderness
+
+:: mayor_office
+// 动态任务系统
+if $world_quest_available && !$player_quest_active
+    村长[严肃]: 最近村子附近出现了一些魔物，我们需要你的帮助。
+    -> 接受任务
+        set $player_quest_active true
+        add $world_danger_level 1
+        => quest_accepted
+    -> 拒绝任务
+        sub $player_reputation 1
+        => quest_rejected
+else
+    村长[满意]: 最近村子很太平，多亏了你的帮助。
+    => town_entrance
+endif
+
+:: quest_accepted
+// 任务接受后的动态对话
+if $player_level >= 3
+    村长[放心]: 以你的实力，应该能轻松完成这个任务。
+else
+    村长[担心]: 这个任务可能有点危险，你要小心。
+endif
+
+-> 立即出发
+    => forest
+-> 先做准备
+    => prepare_quest
+
+:: prepare_quest
+// 准备任务
+if $player_has_sword
+    商人: 你已经有了武器，还需要治疗药水吗？
+else
+    商人: 你需要一把好剑，我这里正好有一把。
+endif
+
+-> 购买补给
+    if $player_gold >= $potion_price && !$player_has_potion
+        sub $player_gold $potion_price
+        set $player_has_potion true
+        商人: 这些药水应该能帮到你。
+    endif
+    => forest
+-> 直接出发
+    => forest
+
+:: forest
+// 动态战斗场景
+if $weather == "下雨"
+    森林里雾气弥漫，能见度很低。 #场景 #森林 #雨天
+else
+    阳光透过树叶洒下斑驳的光影。 #场景 #森林 #晴天
+endif
+
+// 动态敌人
+var $enemy_type random(1, 3)
+if $enemy_type == 1
+    魔物[愤怒]: 人类，你竟敢闯入我的领地！
+else
+    魔物[狡猾]: 又一个送死的家伙。
+endif
+
+-> 战斗
+    if $player_has_sword
+        => battle
+    else
+        魔物: 连武器都没有，真是可怜。
+        => game_over
+    endif
+-> 逃跑
+    if random(1, 100) <= 50
+        => escape
+    else
+        魔物: 想跑？没那么容易！
+        => battle
+    endif
+
+:: battle
+// 改进的战斗系统
+var $enemy_hp 50
+var $enemy_level $world_danger_level
+var $battle_round 1
+
+战斗开始！第{$battle_round}回合 #战斗
+
+if $player_has_sword
+    var $attack_power plus(random(10, 20), $player_level)
+else
+    var $attack_power plus(random(5, 10), $player_level)
+endif
+
+-> 普通攻击
+    sub $enemy_hp $attack_power
+    勇者: 看招！
+    if $enemy_hp <= 0
+        => victory
+    else
+        add $battle_round 1
+        => battle
+    endif
+-> 使用技能
+    if $player_mp >= 20
+        sub $player_mp 20
+        sub $enemy_hp multiply($attack_power, 2)
+        勇者: 终极一击！
+        if $enemy_hp <= 0
+            => victory
+        else
+            add $battle_round 1
+            => battle
+        endif
+    else
+        勇者: 魔力不足...
+        => battle
+    endif
+-> 使用道具
+    if $player_has_potion
+        add $player_hp 50
+        set $player_has_potion false
+        勇者: 恢复了！
+        => battle
+    elif $player_has_magic_scroll
+        set $player_has_magic_scroll false
+        set $enemy_hp 0
+        勇者: 见识下魔法的力量吧！
+        => victory
+    else
+        勇者: 没有可用的道具...
+        => battle
+    endif
+-> 逃跑
+    if random(1, 100) <= 30
+        => escape
+    else
+        勇者: 逃跑失败！
+        => battle
+    endif
+
+:: victory
+// 胜利奖励系统
+add $player_exp random(30, 50)
+add $player_gold random(40, 80)
+add $player_reputation 2
+add $npc_mayor_quests_completed 1
+set $player_quest_active false
+
+if $player_exp >= 100
+    add $player_level 1
+    set $player_exp 0
+    系统: 恭喜升级！你的实力变强了！
+    
+    if $player_level >= 5 && !$world_magic_awakened
+        set $world_magic_awakened true
+        系统: 随着等级提升，你感觉到体内的魔力在觉醒！
+    endif
+endif
+
+-> 返回小镇
+    => town_entrance
+-> 继续探索
+    if $player_hp >= 50
+        => wilderness
+    else
+        系统: 体力不足，建议先回镇上休息。
+        => town_entrance
+    endif
+
+:: game_over
+// 游戏结束系统
+if $player_reputation >= 5
+    村民们[悲伤]: 英雄倒下了...但他的传说将永远流传。
+elif $player_level >= 3
+    村民们[遗憾]: 可惜了，他本来很有潜力的。
+else
+    村民们[叹息]: 又一个倒在冒险路上的年轻人...
+endif
+
+系统: 游戏结束 - 你的冒险到此为止了...
+
+统计数据：
+等级: {$player_level}
+声望: {$player_reputation}
+发现地点: {$player_discovered_locations}
+学习技能: {$player_skills_learned}
+生存天数: {$day_count}
+
+-> 重新开始
+    => start
+-> 退出游戏
+    谢谢游玩！
+
+:: escape
+// 动态逃跑结果
+if $player_hp > 0
+    你成功逃回了小镇，但任务失败了。
+    sub $player_reputation 1
+    set $player_quest_active false
+else
+    你重伤逃回，需要休息。
+    set $player_hp 1
+endif
+
+add $day_count 1
+=> town_entrance
+
+魔物: 啊！！！我竟然败给了人类... #战斗 #胜利 #剧情
+
+你被魔物击败了... #结局 #失败 #战斗
+
+你逃回了小镇，魔物的威胁仍然存在。 #结局 #逃跑 #失败
+
+谢谢游玩！这次冒险到此结束。 #结局 #完成 #游戏
+
+:: town_entrance
+// 小镇入口场景
+这里是落叶镇的入口，古老的石砌城门上爬满了常青藤。 #场景 #入口
+
+if $world_festival_day
+    街道上张灯结彩，到处都是欢声笑语。 #场景 #节日
+elif $weather == "晴朗"
+    阳光洒在青石板路上，照出一条金色的小路。 #场景 #晴天
+elif $weather == "下雨"
+    雨水打在石板路上，发出清脆的声响。 #场景 #雨天
+else
+    路边的路灯散发着温暖的光芒。 #场景 #夜晚
+endif
+
+-> 查看状态
+    => status_panel
+-> 探索小镇
+    => town_tour
+-> 访问市场
+    => market
+-> 拜访村长
+    => mayor_office
+-> 探索郊外
+    => wilderness
+
+:: festival_market
+// 节日市场
+热闹的市场上挤满了来自各地的商人和游客。 #场景 #市场 #节日
+
+商人[热情]: 欢迎光临节日市场！今天所有商品都有特别优惠！
+
+// 节日特价
+var $festival_sword_price divide($sword_price, 2)
+var $festival_potion_price divide($potion_price, 2)
+var $festival_scroll_price divide($magic_scroll_price, 2)
+
+-> 查看特价武器
+    商人: 这把精灵宝剑现在只要{$festival_sword_price}金币！
+    -> 购买剑
+        if $player_gold >= $festival_sword_price && !$player_has_sword
+            sub $player_gold $festival_sword_price
+            set $player_has_sword true
+            商人: 节日特惠，物超所值！
+            add $npc_merchant_attitude 2
+        else
+            商人: 抱歉，您的金币不够或已经有一把剑了。
+        endif
+-> 查看特价药水
+    商人: 治疗药水节日特价，只要{$festival_potion_price}金币！
+    -> 购买药水
+        if $player_gold >= $festival_potion_price && !$player_has_potion
+            sub $player_gold $festival_potion_price
+            set $player_has_potion true
+            商人: 祝您节日愉快！
+            add $npc_merchant_attitude 1
+        else
+            商人: 抱歉，您的金币不够或已经有药水了。
+        endif
+-> 查看特价魔法道具
+    if $world_magic_awakened
+        商人: 这卷魔法卷轴节日特价，仅需{$festival_scroll_price}金币！
+        -> 购买卷轴
+            if $player_gold >= $festival_scroll_price && !$player_has_magic_scroll
+                sub $player_gold $festival_scroll_price
+                set $player_has_magic_scroll true
+                商人: 愿魔法之光指引您！
+                add $npc_merchant_attitude 2
+            else
+                商人: 看来这卷轴与您无缘。
+            endif
+    else
+        商人: 魔法物品需要特殊的资质。
+    endif
+-> 离开市场
+    => town_entrance
+
+:: waiting_room
+// 村长办公室等候室
+这是一个布置简单但整洁的等候室，墙上挂着历代村长的画像。 #场景 #室内
+
+村长助手[礼貌]: 村长正在处理重要事务，请稍候。
+
+-> 等待
+    if random(1, 100) <= 50
+        村长助手: 村长可以见您了。
+        => mayor_office
+    else
+        村长助手: 抱歉，可能还需要等一会。
+        => waiting_room
+    endif
+-> 离开
+    => town_entrance
+
+:: quest_rejected
+// 拒绝任务
+村长[失望]: 我理解，这确实是个危险的任务...
+
+sub $npc_mayor_quests_completed 1
+sub $player_reputation 1
+
+-> 道歉离开
+    => town_entrance
+-> 解释原因
+    add $player_reputation 1
+    村长[理解]: 好吧，等你准备好了再来吧。
+    => town_entrance
+
+:: magic_circle
+// 魔法阵
+这是一个古老的魔法阵，地面上的符文散发着微弱的光芒。 #场景 #魔法
+
+if $world_magic_awakened
+    魔法阵随着你的接近开始发光！
+    -> 尝试激活
+        if $player_mp >= 30
+            sub $player_mp 30
+            add $player_skills_learned 1
+            系统: 你学会了一个新的魔法技能！
+            => wilderness
+        else
+            系统: 魔力不足，无法激活魔法阵。
+            => wilderness
+        endif
+    -> 记录符文
+        add $player_skills_learned 1
+        系统: 你记住了魔法阵的符文模式。
+        => wilderness
+else
+    这些符文对你来说毫无意义。
+    => wilderness
+endif
+
+:: secret_chamber
+// 秘密房间
+这是一个隐藏的密室，空气中充满了浓郁的魔法能量。 #场景 #密室
+
+古老的魔法装置在墙壁上散发着微光，似乎在等待着什么... #场景 #魔法
+
+-> 调查魔法装置
+    if $player_mp >= 50
+        sub $player_mp 50
+        add $player_skills_learned 2
+        系统: 你从古老的魔法装置中学到了强大的魔法！
+        => ancient_ruins
+    else
+        系统: 魔力不足，无法与魔法装置共鸣。
+        => ancient_ruins
+    endif
+-> 搜索密室
+    if random(1, 100) <= 30
+        你发现了一些珍贵的魔法物品！
+        add $player_gold random(100, 200)
+        => ancient_ruins
+    else
+        这里似乎已经被搜索过了。
+        => ancient_ruins
+    endif
+-> 离开密室
+    => ancient_ruins
