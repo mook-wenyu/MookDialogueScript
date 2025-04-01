@@ -49,6 +49,9 @@
     <Compile Include="Assets\Scripts\UnityLogger.cs" />
     <Compile Include="Assets\Scripts\DialogueMgr.cs" />
     <Compile Include="Assets\Scripts\NormalDialogueUI.cs" />
+    <Compile Include="Assets\Scripts\ExcelToJsonConverter.cs" />
+    <None Include="Assets\Resources\Data\Sheet2.json" />
+    <None Include="Assets\Resources\Data\Sheet1.json" />
     <None Include="Assets\Resources\DialogueScripts\example_dialogue.txt" />
     <Reference Include="UnityEngine">
       <HintPath>D:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
@@ -307,6 +310,18 @@
     </Reference>
     <Reference Include="MookDialogueScript">
       <HintPath>D:\RiderProjects\MookDialogueScript\UnityProjectExample\Assets\Plugins\MookDialogueScript.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelDataReader">
+      <HintPath>D:\RiderProjects\MookDialogueScript\UnityProjectExample\Assets\Plugins\ExcelDataReader.dll</HintPath>
+    </Reference>
+    <Reference Include="ExcelDataReader.DataSet">
+      <HintPath>D:\RiderProjects\MookDialogueScript\UnityProjectExample\Assets\Plugins\ExcelDataReader.DataSet.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encoding.CodePages">
+      <HintPath>D:\RiderProjects\MookDialogueScript\UnityProjectExample\Assets\Plugins\System.Text.Encoding.CodePages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>D:\RiderProjects\MookDialogueScript\UnityProjectExample\Assets\Plugins\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="netstandard">
       <HintPath>D:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Data\NetStandard\ref\2.1.0\netstandard.dll</HintPath>
